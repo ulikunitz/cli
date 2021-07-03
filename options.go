@@ -98,7 +98,10 @@ func UsageOptions(w io.Writer, opts []*Option, indent string) {
 }
 
 func unrecognizedOptionError(arg string) error {
-	return fmt.Errorf("unregognized option %s", arg)
+	return &OptionError{
+		Option: "unrecognized",
+		Msg:    fmt.Sprintf("unrecognized option %s", arg),
+	}
 }
 
 func handleLongOption(options []*Option, args []string) (argsUsed int, err error) {
@@ -130,13 +133,17 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 
 	if !found.HasParam {
 		if k >= 0 {
-			return 1, fmt.Errorf(
-				"option --%s requires no parameter", option)
+			return 1, &OptionError{Option: option,
+				Msg: fmt.Sprintf(
+					"option --%s requires no parameter",
+					option)}
 		}
 		if err = found.SetValue(""); err != nil {
-			return 1, fmt.Errorf(
-				"error setting value for option --%s: %w",
-				option, err)
+			return 1, &OptionError{Option: option,
+				Msg: fmt.Sprintf(
+					"error setting value for option --%s",
+					option),
+				Wrapped: err}
 		}
 		return 1, nil
 	}
@@ -144,8 +151,10 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 	var param string
 	if k < 0 {
 		if len(args) == 1 {
-			return 1, fmt.Errorf("no parameter for option --%s",
-				option)
+			return 1, &OptionError{Option: option,
+				Msg: fmt.Sprintf("no parameter for option --%s",
+					option),
+			}
 		}
 		param = args[1]
 		argsUsed = 2
@@ -155,9 +164,12 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 	}
 
 	if err = found.SetValue(param); err != nil {
-		return argsUsed, fmt.Errorf(
-			"error setting value %q for option --%s",
-			param, option)
+		return argsUsed, &OptionError{
+			Option: option,
+			Msg: fmt.Sprintf("error setting value %q for option --%s",
+				param, option),
+			Wrapped: err,
+		}
 	}
 
 	return argsUsed, nil
@@ -166,38 +178,75 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 func handleShortOptions(options []*Option, args []string) (argsUsed int, err error) {
 	arg := args[0]
 	i := 1
-	for _, option := range arg[1:] {
+	for _, short := range arg[1:] {
+		option := fmt.Sprintf("%c", short)
 		var found *Option
 		for _, o := range options {
-			if o.Short == option {
+			if o.Short == short {
 				found = o
 				break
 			}
 		}
 		if found == nil {
-			return i, fmt.Errorf("unrecognized option -%c", option)
+			return i, unrecognizedOptionError(option)
 		}
 		if !found.HasParam {
 			if err = found.SetValue(""); err != nil {
-				return i, fmt.Errorf(
-					"error setting value for option -%c: %w",
-					option, err)
+				return i, &OptionError{
+					Option: option,
+					Msg: fmt.Sprintf(
+						"error setting value for"+
+							" option -%s", option),
+					Wrapped: err}
 			}
 			continue
 		}
 		if i >= len(args) {
-			return i, fmt.Errorf("option -%c lacks parameter", option)
+			return i, &OptionError{
+				Option: option,
+				Msg: fmt.Sprintf(
+					"option -%s lacks parameter", option),
+			}
 		}
 		param := args[i]
 		i++
 		if err = found.SetValue(param); err != nil {
-			return i, fmt.Errorf(
-				"error setting value %s for option -%c: %w",
-				param, option, err)
+			return i, &OptionError{
+				Option: option,
+				Msg: fmt.Sprintf("error setting value %s for option %s",
+					param, option),
+				Wrapped: err,
+			}
 		}
 	}
 	return i, nil
 }
+
+type OptionError struct {
+	Option  string
+	Msg     string
+	Wrapped error
+}
+
+func (err *OptionError) Error() string {
+	msg := err.Msg
+	if msg == "" {
+		msg = fmt.Sprintf("option error for %s", msg)
+	}
+	if err.Wrapped != nil {
+		return fmt.Sprintf("%s: %s", msg, err.Wrapped)
+	}
+	return msg
+}
+
+func (err *OptionError) Is(e error) bool {
+	if oe, ok := e.(*OptionError); ok {
+		return err.Option == oe.Option
+	}
+	return errors.Is(err.Wrapped, e)
+}
+
+func (err *OptionError) Unwrap() error { return err.Wrapped }
 
 type ParseOptionsErrors []error
 

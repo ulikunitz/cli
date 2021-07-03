@@ -1,6 +1,7 @@
 package cli_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -34,19 +35,19 @@ func TestParseOptions(t *testing.T) {
 
 	tests := []struct {
 		args []string
-		err  bool
+		err  *cli.OptionError
 		f    bool
 		str  string
 		n    int
 	}{
 		{args: []string{}, f: false, str: "", n: 0},
-		{args: []string{"-h"}, err: true},
+		{args: []string{"-h"}, err: &cli.OptionError{Option: "unrecognized"}},
 		{args: []string{"--str=foo", "bar"}, str: "foo", n: 1},
 		{args: []string{"--s", "foo", "bar"}, str: "foo", n: 2},
 		{args: []string{"--s", "foo", "--fl", "bar"}, str: "foo",
 			f: true, n: 3},
-		{args: []string{"-s"}, err: true},
-		{args: []string{"--str"}, err: true},
+		{args: []string{"-s"}, err: &cli.OptionError{Option: "s"}},
+		{args: []string{"--str"}, err: &cli.OptionError{Option: "str"}},
 		{args: []string{"-fs", "foo", "bar"},
 			str: "foo", f: true, n: 2},
 	}
@@ -57,14 +58,20 @@ func TestParseOptions(t *testing.T) {
 		f = false
 		str = ""
 		n, err := cli.ParseOptions(&sb, opts, tc.args)
-		if tc.err {
+		if tc.err != nil {
 			if err == nil {
 				t.Fatalf("ParsFlags(&sb, opts, %+v)"+
 					" returns no error; want error",
 					tc.args)
 			}
-			t.Logf("ParseFlags(&sb, opts, %+v) error %s",
-				tc.args, err)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("ParsFlags(&sb, opts, %+v)"+
+					" returns error %#v; want error %#v",
+					tc.args, err, tc.err)
+
+			}
+			t.Logf("ParseFlags(&sb, opts, %+v) error %s; want %s",
+				tc.args, err, tc.err)
 			continue
 		}
 		if err != nil {
