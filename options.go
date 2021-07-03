@@ -248,9 +248,35 @@ func (err *OptionError) Is(e error) bool {
 
 func (err *OptionError) Unwrap() error { return err.Wrapped }
 
-type ParseOptionsErrors []error
+// errorList is represented by a slice of errors. It should be used if multiple
+// errors should be returned by a function. It behaves itself as an error.
+type errorList []error
 
-func (err ParseOptionsErrors) Error() string {
+// Flatten computes the error value to be returned from a function or method. If
+// the error list is empty a nil error is computed, if the list has a single
+// error this will be returned. Only if the list contains more than one element
+// the list will be returned.
+func (err errorList) Flatten() error {
+	switch len(err) {
+	case 0:
+		return nil
+	case 1:
+		return err[0]
+	default:
+		return err
+	}
+}
+
+func (err errorList) Unwrap() error {
+	switch len(err) {
+	case 0, 1:
+		return nil
+	default:
+		return err[1:].Flatten()
+	}
+}
+
+func (err errorList) Error() string {
 	if len(err) == 0 {
 		return ""
 	}
@@ -262,31 +288,29 @@ func (err ParseOptionsErrors) Error() string {
 	return sb.String()
 }
 
-func (err ParseOptionsErrors) Is(e error) bool {
-	if terr, ok := e.(ParseOptionsErrors); ok {
-		if len(err) != len(terr) {
+func (err errorList) Is(e error) bool {
+	if el, ok := e.(errorList); ok  {
+		if len(err) != len(el) {
 			return false
 		}
 		for i, cerr := range err {
-			if !errors.Is(cerr, terr[i]) {
+			if !errors.Is(cerr, el[i]) {
 				return false
 			}
 		}
 		return true
 	}
-	for _, cerr := range err {
-		if errors.Is(cerr, e) {
-			return true
-		}
+	if len(err) == 0 {
+		return e == nil
 	}
-	return false
+	return errors.Is(err[0], e)
 }
 
 // ParseOptions parses the flags and stops at first non-flag or '--'. It returns
 // the number of args parsed.
 func ParseOptions(w io.Writer, options []*Option, args []string) (n int, err error) {
 	i := 0
-	var pferr ParseOptionsErrors
+	var errList errorList
 	for i < len(args) {
 		a := args[i]
 		if strings.HasPrefix(a, "--") {
@@ -297,7 +321,7 @@ func ParseOptions(w io.Writer, options []*Option, args []string) (n int, err err
 			i += argsUsed
 			if err != nil {
 				fmt.Fprintln(w, err)
-				pferr = append(pferr, err)
+				errList = append(errList, err)
 			}
 			continue
 		}
@@ -311,7 +335,7 @@ func ParseOptions(w io.Writer, options []*Option, args []string) (n int, err err
 			i += argsUsed
 			if err != nil {
 				fmt.Fprintln(w, err)
-				pferr = append(pferr, err)
+				errList = append(errList, err)
 			}
 			continue
 		}
@@ -319,13 +343,5 @@ func ParseOptions(w io.Writer, options []*Option, args []string) (n int, err err
 		break
 	}
 
-	switch len(pferr) {
-	case 0:
-		return i, nil
-	case 1:
-		return i, pferr[0]
-	default:
-		return i, pferr
-	}
-
+	return i, errList.Flatten()
 }
