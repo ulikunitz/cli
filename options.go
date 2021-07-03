@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -201,18 +202,35 @@ func handleShortOptions(options []*Option, args []string) (argsUsed int, err err
 type ParseOptionsErrors []error
 
 func (err ParseOptionsErrors) Error() string {
+	if len(err) == 0 {
+		return ""
+	}
 	var sb strings.Builder
-	for _, e := range err {
+	for _, e := range err[:len(err)-1] {
 		fmt.Fprintln(&sb, e)
 	}
+	fmt.Fprint(&sb, err[len(err)-1])
 	return sb.String()
 }
 
-func (err ParseOptionsErrors) Unwrap() error {
-	if len(err) < 1 {
-		return nil
+func (err ParseOptionsErrors) Is(e error) bool {
+	if terr, ok := e.(ParseOptionsErrors); ok {
+		if len(err) != len(terr) {
+			return false
+		}
+		for i, cerr := range err {
+			if !errors.Is(cerr, terr[i]) {
+				return false
+			}
+		}
+		return true
 	}
-	return err[1:]
+	for _, cerr := range err {
+		if errors.Is(cerr, e) {
+			return true
+		}
+	}
+	return false
 }
 
 // ParseOptions parses the flags and stops at first non-flag or '--'. It returns
@@ -252,8 +270,13 @@ func ParseOptions(w io.Writer, options []*Option, args []string) (n int, err err
 		break
 	}
 
-	if len(pferr) == 0 {
+	switch len(pferr) {
+	case 0:
 		return i, nil
+	case 1:
+		return i, pferr[0]
+	default:
+		return i, pferr
 	}
-	return i, pferr
+
 }
