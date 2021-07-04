@@ -402,8 +402,8 @@ func ResetOptions(options []*Option) error {
 }
 
 // ParseOptions parses the flags and stops at first non-flag or '--'. It returns
-// the number of args parsed.
-func ParseOptions(w io.Writer, options []*Option, args []string) (n int, err error) {
+// the number of args parsed. The e writer will be used for error messages.
+func ParseOptions(e io.Writer, options []*Option, args []string) (n int, err error) {
 	i := 0
 	var errList errorList
 	for i < len(args) {
@@ -415,7 +415,7 @@ func ParseOptions(w io.Writer, options []*Option, args []string) (n int, err err
 			argsUsed, err := handleLongOption(options, args[i:])
 			i += argsUsed
 			if err != nil {
-				fmt.Fprintln(w, err)
+				fmt.Fprintln(e, err)
 				errList = append(errList, err)
 			}
 			continue
@@ -429,7 +429,7 @@ func ParseOptions(w io.Writer, options []*Option, args []string) (n int, err err
 			argsUsed, err := handleShortOptions(options, args[i:])
 			i += argsUsed
 			if err != nil {
-				fmt.Fprintln(w, err)
+				fmt.Fprintln(e, err)
 				errList = append(errList, err)
 			}
 			continue
