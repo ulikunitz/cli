@@ -8,13 +8,24 @@ import (
 	"strings"
 )
 
+// Option represents a single option.
 type Option struct {
-	Name        string
-	Short       rune
+	// long name of the option; must be used with prefix '--'
+	Name string
+	// short option
+	Short rune
+	// description of the option
 	Description string
-	HasParam    bool
-	Default     string
-	SetValue    func(arg string) error
+	// HasParam defines whether the option has parameter
+	HasParam bool
+	// OptionalParam
+	OptionalParam bool
+	// ParamType desribes the type of the parameter
+	ParamType string
+	// Default value
+	Default string
+	// SetValue set the value to the string given.
+	SetValue func(arg string) error
 }
 
 // BoolOption initializes a boolean flag. The argument f will be set to false.
@@ -41,6 +52,7 @@ func StringOption(s *string, name string, short rune, description string) *Optio
 		Short:       short,
 		Description: description,
 		HasParam:    true,
+		ParamType:   "string",
 		Default:     *s,
 		SetValue: func(arg string) error {
 			*s = arg
@@ -61,7 +73,48 @@ func findOption(flags []*Option, name string) (f *Option, ok bool) {
 	return nil, false
 }
 
-func UsageOptions(w io.Writer, opts []*Option, indent string) {
+func (opt *Option) Usage() string {
+	var ptype string
+	if opt.HasParam {
+		ptype = opt.ParamType
+		if ptype == "" {
+			ptype = "param"
+		}
+	}
+	var sb strings.Builder
+	if opt.Short != 0 {
+		fmt.Fprintf(&sb, "-%c", opt.Short)
+		if opt.HasParam {
+			if opt.OptionalParam {
+				fmt.Fprintf(&sb, " [%s]", ptype)
+			} else {
+				fmt.Fprintf(&sb, " %s", ptype)
+			}
+		}
+	}
+	if opt.Name != "" {
+		if opt.Short != 0 {
+			fmt.Fprintf(&sb, ", ")
+		}
+		fmt.Fprintf(&sb, "--%s", opt.Name)
+		if opt.HasParam {
+			if opt.OptionalParam {
+				fmt.Fprintf(&sb, "[=%s]", ptype)
+			} else {
+				fmt.Fprintf(&sb, "=%s", ptype)
+			}
+		}
+	}
+	if opt.Default != "" {
+		fmt.Fprintf(&sb, " (default %s)", opt.Default)
+	}
+	return sb.String()
+}
+
+// UsageOptions returns a textual list of all options sorted by alphabet. Usage
+// information for an option will be preceded by indent1 and the description by
+// indent1+indent2 formatted on 80 character lines.
+func UsageOptions(w io.Writer, opts []*Option, indent1, indent2 string) (n int, err error) {
 	names := make([]string, 0, len(opts))
 	for _, f := range opts {
 		if f.Short != 0 {
@@ -77,24 +130,29 @@ func UsageOptions(w io.Writer, opts []*Option, indent string) {
 		if !ok {
 			panic("we should know the string")
 		}
-		switch {
-		case f.Short != 0 && f.Name != "":
-			fmt.Fprintf(w, "%s-%c, --%s:\t%s", indent, f.Short,
-				f.Name, f.Description)
-		case f.Short != 0:
-			fmt.Fprintf(w, "%s-%c:\t%s", indent, f.Short,
-				f.Description)
-		case f.Name != "":
-			fmt.Fprintf(w, "%s--%s:\t%s", indent, f.Name,
-				f.Description)
-		default:
-			continue
+		k, err := fmt.Fprint(w, indent1)
+		n += k
+		if err != nil {
+			return n, err
 		}
-		if f.Default != "" {
-			fmt.Fprintf(w, " (%s)", f.Default)
+		k, err = fmt.Fprint(w, f.Usage())
+		n += k
+		if err != nil {
+			return n, err
 		}
-		fmt.Fprintln(w)
+		k, err = fmt.Fprintln(w)
+		n += k
+		if err != nil {
+			return n, err
+		}
+		k, err = formatText(w, f.Description, 80, indent1+indent2)
+		n += k
+		if err != nil {
+			return n, err
+		}
 	}
+
+	return n, nil
 }
 
 func unrecognizedOptionError(arg string) error {
@@ -151,16 +209,20 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 	var param string
 	if k < 0 {
 		if len(args) == 1 {
-			return 1, &OptionError{Option: option,
-				Msg: fmt.Sprintf("no parameter for option --%s",
-					option),
+			if !found.OptionalParam {
+				return 1, &OptionError{Option: option,
+					Msg: fmt.Sprintf("no parameter for option --%s",
+						option),
+				}
 			}
+			argsUsed = 1
+		} else {
+			param = args[1]
+			argsUsed = 2
 		}
-		param = args[1]
-		argsUsed = 2
 	} else {
-		argsUsed = 1
 		param = arg[k+1:]
+		argsUsed = 1
 	}
 
 	if err = found.SetValue(param); err != nil {
@@ -190,6 +252,7 @@ func handleShortOptions(options []*Option, args []string) (argsUsed int, err err
 		if found == nil {
 			return i, unrecognizedOptionError(option)
 		}
+
 		if !found.HasParam {
 			if err = found.SetValue(""); err != nil {
 				return i, &OptionError{
@@ -201,15 +264,21 @@ func handleShortOptions(options []*Option, args []string) (argsUsed int, err err
 			}
 			continue
 		}
+
+		var param string
 		if i >= len(args) {
-			return i, &OptionError{
-				Option: option,
-				Msg: fmt.Sprintf(
-					"option -%s lacks parameter", option),
+			if !found.OptionalParam {
+				return i, &OptionError{
+					Option: option,
+					Msg: fmt.Sprintf(
+						"option -%s lacks parameter",
+						option),
+				}
 			}
+		} else {
+			param = args[i]
+			i++
 		}
-		param := args[i]
-		i++
 		if err = found.SetValue(param); err != nil {
 			return i, &OptionError{
 				Option: option,
@@ -289,7 +358,7 @@ func (err errorList) Error() string {
 }
 
 func (err errorList) Is(e error) bool {
-	if el, ok := e.(errorList); ok  {
+	if el, ok := e.(errorList); ok {
 		if len(err) != len(el) {
 			return false
 		}

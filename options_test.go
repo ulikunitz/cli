@@ -18,10 +18,10 @@ func TestUsageOptions(t *testing.T) {
 	}
 
 	var sb strings.Builder
-	cli.UsageOptions(&sb, opts, "  ")
+	cli.UsageOptions(&sb, opts, "  ", "  ")
 
 	s := sb.String()
-	t.Logf("usage: %s", s)
+	t.Logf("usage:\n%s", s)
 }
 
 func TestParseOptions(t *testing.T) {
