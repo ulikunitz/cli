@@ -207,10 +207,10 @@ func lex(r io.Reader) *lexer {
 	return &lexer{r: bufio.NewReader(r)}
 }
 
-func formatText(w io.Writer, s string, lineLen int, indent string) (n int, err error) {
+func formatText(w io.Writer, s string, lineWidth int, indent string) (n int, err error) {
 	const verbatimIndent = "  "
-	if lineLen <= 0 {
-		lineLen = 80
+	if lineWidth <= 0 {
+		lineWidth = 80
 	}
 	l := lex(strings.NewReader(s))
 	column := 0
@@ -265,7 +265,7 @@ func formatText(w io.Writer, s string, lineLen int, indent string) (n int, err e
 				size = 1
 			}
 			size += len(t.val)
-			if column > 0 && column+size > lineLen {
+			if column > 0 && column+size > lineWidth {
 				k, err = fmt.Fprint(w, "\n")
 				n += k
 				if err != nil {
