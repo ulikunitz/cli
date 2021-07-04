@@ -31,7 +31,7 @@ type Option struct {
 	ResetValue func()
 }
 
-// Resets resets the value of the option to the default.
+// Reset calls ResetValue if defined or SetValue with with the default argument.
 func (opt *Option) Reset() error {
 	if opt.ResetValue != nil {
 		opt.ResetValue()
@@ -86,6 +86,7 @@ func findOption(flags []*Option, name string) (f *Option, ok bool) {
 	return nil, false
 }
 
+// Usage returns the one-line string for the option.
 func (opt *Option) Usage() string {
 	var ptype string
 	if opt.HasParam {
