@@ -8,6 +8,92 @@ import (
 	"unicode"
 )
 
+// formatText is a generic text formatter. Text that starts with newlines is
+// is formatted as verbatim text without reformatting. The output text is
+// indented with the indent string. Don't use tabs in the indent because it will
+// be counted as a single character.
+func formatText(w io.Writer, s string, lineWidth int, indent string) (n int, err error) {
+	const verbatimIndent = "  "
+	if lineWidth <= 0 {
+		lineWidth = 80
+	}
+	l := lex(strings.NewReader(s))
+	column := 0
+	var k int
+	for {
+		t, err := l.nextToken()
+		if err != nil {
+			if err != io.EOF {
+				return n, err
+			}
+			if column > 0 {
+				k, err = fmt.Fprint(w, "\n")
+				n += k
+				if err != nil {
+					return n, err
+				}
+			}
+			return n, nil
+		}
+		switch t.typ {
+		case tParagraph:
+			k, err = fmt.Fprint(w, "\n\n")
+			n += k
+			if err != nil {
+				return n, err
+			}
+			column = 0
+		case tVerbatim:
+			if column > 0 {
+				k, err := fmt.Fprint(w, "\n")
+				n += k
+				if err != nil {
+					return n, err
+				}
+				column = 0
+			}
+			k, err = fmt.Fprintf(w, "%s%s%s\n", indent,
+				verbatimIndent, t.val)
+			n += k
+			if err != nil {
+				return n, err
+			}
+		case tWord:
+			var (
+				size       int
+				wordIndent string
+			)
+			if column == 0 {
+				wordIndent = indent
+				size = len(indent)
+			} else {
+				wordIndent = " "
+				size = 1
+			}
+			size += len(t.val)
+			if column > 0 && column+size > lineWidth {
+				k, err = fmt.Fprint(w, "\n")
+				n += k
+				if err != nil {
+					return n, err
+				}
+				column = 0
+				wordIndent = indent
+				size = len(wordIndent) + len(t.val)
+			}
+			k, err = fmt.Fprint(w, wordIndent, t.val)
+			n += k
+			if err != nil {
+				return n, err
+			}
+			column += size
+		}
+	}
+}
+
+// The remaining part of the file provides a lexer used by formatText. It uses
+// the state as function approach introduced by Rob Pike.
+
 type tokenType int
 
 const (
@@ -205,82 +291,4 @@ func (l *lexer) nextToken() (t token, err error) {
 
 func lex(r io.Reader) *lexer {
 	return &lexer{r: bufio.NewReader(r)}
-}
-
-func formatText(w io.Writer, s string, lineWidth int, indent string) (n int, err error) {
-	const verbatimIndent = "  "
-	if lineWidth <= 0 {
-		lineWidth = 80
-	}
-	l := lex(strings.NewReader(s))
-	column := 0
-	var k int
-	for {
-		t, err := l.nextToken()
-		if err != nil {
-			if err != io.EOF {
-				return n, err
-			}
-			if column > 0 {
-				k, err = fmt.Fprint(w, "\n")
-				n += k
-				if err != nil {
-					return n, err
-				}
-			}
-			return n, nil
-		}
-		switch t.typ {
-		case tParagraph:
-			k, err = fmt.Fprint(w, "\n\n")
-			n += k
-			if err != nil {
-				return n, err
-			}
-			column = 0
-		case tVerbatim:
-			if column > 0 {
-				k, err := fmt.Fprint(w, "\n")
-				n += k
-				if err != nil {
-					return n, err
-				}
-				column = 0
-			}
-			k, err = fmt.Fprintf(w, "%s%s%s\n", indent, verbatimIndent, t.val)
-			n += k
-			if err != nil {
-				return n, err
-			}
-		case tWord:
-			var (
-				size       int
-				wordIndent string
-			)
-			if column == 0 {
-				wordIndent = indent
-				size = len(indent)
-			} else {
-				wordIndent = " "
-				size = 1
-			}
-			size += len(t.val)
-			if column > 0 && column+size > lineWidth {
-				k, err = fmt.Fprint(w, "\n")
-				n += k
-				if err != nil {
-					return n, err
-				}
-				column = 0
-				wordIndent = indent
-				size = len(wordIndent) + len(t.val)
-			}
-			k, err = fmt.Fprint(w, wordIndent, t.val)
-			n += k
-			if err != nil {
-				return n, err
-			}
-			column += size
-		}
-	}
 }
