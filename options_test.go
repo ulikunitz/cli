@@ -94,3 +94,27 @@ func TestParseOptions(t *testing.T) {
 		}
 	}
 }
+
+func TestResetOptions(t *testing.T) {
+	var f bool
+	var str string
+
+	opts := []*cli.Option{
+		cli.BoolOption(&f, "flag", 'f', "a boolean option"),
+		cli.StringOption(&str, "str", 's', " a string option"),
+	}
+
+	f = true
+	str = "foobar"
+
+	if err := cli.ResetOptions(opts); err != nil {
+		t.Fatalf("ResetOptions error %s", err)
+	}
+
+	if f {
+		t.Errorf("f is %t after reset; want %t", true, false)
+	}
+	if str != "" {
+		t.Errorf("str is %q after reset; want %q", str, "")
+	}
+}

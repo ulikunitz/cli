@@ -22,10 +22,22 @@ type Option struct {
 	OptionalParam bool
 	// ParamType desribes the type of the parameter
 	ParamType string
-	// Default value
+	// Default param value.
 	Default string
-	// SetValue set the value to the string given.
-	SetValue func(arg string) error
+	// SetValue set the value to the parameter string given.
+	SetValue func(param string) error
+	// ResetValue can be used to reset the value. If it is nil then
+	// opt.SetValue(opt.Default) will be called.
+	ResetValue func()
+}
+
+// Resets resets the value of the option to the default.
+func (opt *Option) Reset() error {
+	if opt.ResetValue != nil {
+		opt.ResetValue()
+		return nil
+	}
+	return opt.SetValue(opt.Default)
 }
 
 // BoolOption initializes a boolean flag. The argument f will be set to false.
@@ -41,6 +53,7 @@ func BoolOption(f *bool, name string, short rune, description string) *Option {
 			*f = true
 			return nil
 		},
+		ResetValue: func() { *f = false },
 	}
 }
 
@@ -373,6 +386,19 @@ func (err errorList) Is(e error) bool {
 		return e == nil
 	}
 	return errors.Is(err[0], e)
+}
+
+// ResetOptions resets all options to the default. It may be useful before you
+// are executing Parse a second time on an option set.
+func ResetOptions(options []*Option) error {
+	var errList errorList
+	for _, o := range options {
+		err := o.Reset()
+		if err != nil {
+			errList = append(errList, err)
+		}
+	}
+	return errList.Flatten()
 }
 
 // ParseOptions parses the flags and stops at first non-flag or '--'. It returns
