@@ -235,8 +235,8 @@ func Parse(e io.Writer, root *Command, args []string) (commands []*Command, n in
 						fmt.Fprintln(e, err)
 						return commands, n, err
 					}
+					found = c
 				}
-				found = c
 			}
 			if found == nil {
 				return commands, n, nil
