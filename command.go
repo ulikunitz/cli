@@ -261,7 +261,7 @@ func Run(e io.Writer, root *Command, args []string) error {
 	if cmd.Exec == nil {
 		err := &CommandError{
 			Name:    cmd.Name,
-			Message: "select subcommand for code to execute",
+			Message: "couldn't find executable subcommand",
 		}
 		fmt.Fprintln(e, err)
 		return err
