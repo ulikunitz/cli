@@ -7,6 +7,7 @@ import (
 	"io"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 // Command represents a command in the command tree and maybe the root of its
@@ -37,6 +38,17 @@ func findCommand(commands []*Command, name string) (cmd *Command, ok bool) {
 		}
 	}
 	return nil, false
+}
+
+func maxLen(strings []string) int {
+	n := 0
+	for _, s := range strings {
+		k := utf8.RuneCountInString(s)
+		if k > n {
+			n = k
+		}
+	}
+	return n
 }
 
 // WriteDoc puts the documentation our on w. the style used is that of man
@@ -147,14 +159,17 @@ func (cmd *Command) WriteDoc(w io.Writer) (n int, err error) {
 			}
 		}
 		sort.Strings(names)
+
+		maxNameLen := maxLen(names)
+
 		for _, name := range names {
 			subcmd, ok := findCommand(cmd.Subcommands, name)
 			if !ok {
 				panic(fmt.Errorf("can't find %q", name))
 			}
 			if subcmd.Info != "" {
-				k, err = fmt.Fprintf(w, "%s%s\t%s\n",
-					indent, name, subcmd.Info)
+				k, err = fmt.Fprintf(w, "%s%-*s%s\n",
+					indent, maxNameLen+1, name, subcmd.Info)
 			} else {
 				k, err = fmt.Fprintf(w, "%s%s\n", indent, name)
 			}
