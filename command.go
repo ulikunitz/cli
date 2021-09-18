@@ -168,7 +168,7 @@ func (cmd *Command) WriteDoc(w io.Writer) (n int, err error) {
 				panic(fmt.Errorf("can't find %q", name))
 			}
 			if subcmd.Info != "" {
-				k, err = fmt.Fprintf(w, "%s%-*s%s\n",
+				k, err = fmt.Fprintf(w, "%s%-*s- %s\n",
 					indent, maxNameLen+1, name, subcmd.Info)
 			} else {
 				k, err = fmt.Fprintf(w, "%s%s\n", indent, name)
