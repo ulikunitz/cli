@@ -17,7 +17,7 @@ type Command struct {
 	Name string
 	// short description of the command (e.g. "list all config parameters")
 	Info string
-	// The usage string it may have multiple lines.
+	// The usage string may have multiple lines.
 	Usage string
 	// Longer description that will be formatted using the formatter.
 	Description string
