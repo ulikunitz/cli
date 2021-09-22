@@ -59,14 +59,9 @@ func TestParse(t *testing.T) {
 
 	for _, tc := range tests {
 		sb.Reset()
-		err := cli.Run(&sb, root, tc.args)
+		err := cli.Run(root, tc.args)
 		if err != nil {
 			t.Fatalf("Run %s error %s", tc.args, err)
-		}
-		output := sb.String()
-		if output != tc.output {
-			t.Fatalf("Run %s got %q; want %q",
-				tc.args, output, tc.output)
 		}
 	}
 

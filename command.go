@@ -219,15 +219,13 @@ func unrecognizedCommand(arg string) *CommandError {
 // The root command itself is not parsed but its flags. Out is used for error
 // messages during parsing. The return value n provides the number of commands
 // parsed.
-//
-// The e writer will be used for error output.
-func Parse(e io.Writer, root *Command, args []string) (commands []*Command, n int, err error) {
+func Parse(root *Command, args []string) (commands []*Command, n int, err error) {
 	commands = make([]*Command, 0, 4)
 	cmd := root
 	for {
 		commands = append(commands, cmd)
 		if len(cmd.Options) > 0 {
-			k, err := ParseOptions(e, cmd.Options, args[n:])
+			k, err := ParseOptions(cmd.Options, args[n:])
 			n += k
 			if err != nil {
 				if cmd != root {
@@ -247,7 +245,6 @@ func Parse(e io.Writer, root *Command, args []string) (commands []*Command, n in
 				if strings.HasPrefix(c.Name, arg) {
 					if found != nil {
 						err = unrecognizedCommand(arg)
-						fmt.Fprintln(e, err)
 						return commands, n, err
 					}
 					found = c
@@ -265,10 +262,9 @@ func Parse(e io.Writer, root *Command, args []string) (commands []*Command, n in
 }
 
 // Run parses the arguments and executes the exec command for the command
-// identified. The call may return an error. The e argument provides a stream
-// for error messages.
-func Run(e io.Writer, root *Command, args []string) error {
-	commands, n, err := Parse(e, root, args)
+// identified. The call may return an error.
+func Run(root *Command, args []string) error {
+	commands, n, err := Parse(root, args)
 	if err != nil {
 		return err
 	}
@@ -278,7 +274,6 @@ func Run(e io.Writer, root *Command, args []string) error {
 			Name:    cmd.Name,
 			Message: "couldn't find executable subcommand",
 		}
-		fmt.Fprintln(e, err)
 		return err
 	}
 	args = args[n:]

@@ -57,7 +57,7 @@ func TestParseOptions(t *testing.T) {
 		sb.Reset()
 		f = false
 		str = ""
-		n, err := cli.ParseOptions(&sb, opts, tc.args)
+		n, err := cli.ParseOptions(opts, tc.args)
 		if tc.err != nil {
 			if err == nil {
 				t.Fatalf("ParsFlags(&sb, opts, %+v)"+
