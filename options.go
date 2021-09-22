@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -69,6 +70,35 @@ func StringOption(s *string, name string, short rune, description string) *Optio
 		Default:     *s,
 		SetValue: func(arg string) error {
 			*s = arg
+			return nil
+		},
+	}
+}
+
+// IntOption creates an integer flag. The default value is the value of n when
+// this function is called. Integers in the form of 0b101, 0xf5 or 0234 are
+// supported.
+func IntOption(n *int, name string, short rune, description string) *Option {
+	const intSize = 32 << (^uint(0) >> 63)
+	var def string
+	if *n != 0 {
+		def = fmt.Sprintf("%d", *n)
+	} else {
+		def = ""
+	}
+	return &Option{
+		Name:        name,
+		Short:       short,
+		Description: description,
+		HasParam:    true,
+		ParamType:   "int",
+		Default:     def,
+		SetValue: func(arg string) error {
+			i, err := strconv.ParseInt(arg, 0, intSize)
+			if err != nil {
+				return err
+			}
+			*n = int(i)
 			return nil
 		},
 	}
