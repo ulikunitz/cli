@@ -104,6 +104,36 @@ func IntOption(n *int, name string, short rune, description string) *Option {
 	}
 }
 
+// Float64Option creates a flag with a floating point value. The default value
+// is the value of f when called. All forms of floating point numbers valid in
+// the Go language are supported.
+func Float64Option(f *float64, name string, short rune,
+	description string) *Option {
+	var def string
+	if *f != 0 {
+		def = fmt.Sprintf("%g", *f)
+	} else {
+		def = ""
+	}
+	return &Option{
+		Name:        name,
+		Short:       short,
+		Description: description,
+		HasParam:    true,
+		ParamType:   "float64",
+		Default:     def,
+		SetValue: func(arg string) error {
+			x, err := strconv.ParseFloat(arg, 64)
+			if err != nil {
+				return err
+			}
+			*f = x
+			return nil
+		},
+	}
+
+}
+
 func findOption(flags []*Option, name string) (f *Option, ok bool) {
 	for _, f := range flags {
 		if f.Name == name {
