@@ -1,5 +1,65 @@
-// Package cli supports the creation of command line appplications with
-// subcommands and help output.
+/*
+Package cli supports the creation of command line appplications with
+subcommands and help output.
+
+A typical program will using this package will import the package, setup the
+root command and add a help command.
+
+  import (
+	"log"
+	"os"
+
+	"github.com/ulikunitz/cli"
+  )
+
+  func main() {
+	log.SetFlags(0)
+
+	root := &cli.Command{
+		Name:        "foo",
+		Info:        "program to run compression benchmarks",
+		Subcommands: []*cli.Command{subcommand()},
+	}
+
+	root.Subcommands = append(root.Subcommands, HelpCommand(root))
+
+	var args []string
+	if len(os.Args) == 1 {
+		args = []string{"help"}
+	} else {
+		args = os.Args[1:]
+	}
+
+	if err := cli.Run(root, args); err != nil {
+		log.Fatal(err)
+	}
+  }
+
+It is recommended to create the subcommands in its own functions. The
+HelpCommand function included in this package for convenience is a good example.
+
+  func HelpCommand(root *Command) *Command {
+
+	f := func(args []string) error {
+		commands, _, err := Parse(root, args)
+		if err != nil {
+			return err
+		}
+		cmd := commands[len(commands)-1]
+		_, err = cmd.WriteDoc(os.Stdout)
+		return err
+	}
+
+	cmd := &Command{
+		Name:  "help",
+		Info:  "prints help messages",
+		Usage: root.Name + " help <commands>...",
+		Exec:  f,
+	}
+
+	return cmd
+  }
+*/
 package cli
 
 import (
