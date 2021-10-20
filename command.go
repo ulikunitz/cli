@@ -203,8 +203,12 @@ func (err *CommandError) Unwrap() error { return err.Wrapped }
 // error.
 func (err *CommandError) Error() string {
 	var sb strings.Builder
+
 	if err.Name != "" {
-		fmt.Fprintf(&sb, "%s: %s", err.Name, err.Message)
+		fmt.Fprintf(&sb, "%s", err.Name)
+		if err.Message != "" {
+			fmt.Fprintf(&sb, ": %s", err.Message)
+		}
 	} else {
 		fmt.Fprintf(&sb, "%s", err.Message)
 	}
@@ -212,6 +216,7 @@ func (err *CommandError) Error() string {
 	if err.Wrapped != nil {
 		fmt.Fprintf(&sb, ": %s", err.Wrapped)
 	}
+
 	return sb.String()
 }
 
@@ -237,9 +242,8 @@ func Parse(root *Command, args []string) (commands []*Command, n int, err error)
 			if err != nil {
 				if cmd != root {
 					err = &CommandError{
-						Name: cmd.Name,
-						Message: fmt.Sprintf(
-							"command %s", cmd.Name),
+						Name:    cmd.Name,
+						Message: "",
 						Wrapped: err}
 				}
 				return commands, n, err
