@@ -202,10 +202,17 @@ func (err *CommandError) Unwrap() error { return err.Wrapped }
 // Error prints the error message and appends the error string of the wrapped
 // error.
 func (err *CommandError) Error() string {
-	if err.Wrapped != nil {
-		return fmt.Sprintf("%s: %s", err.Message, err.Wrapped)
+	var sb strings.Builder
+	if err.Name != "" {
+		fmt.Fprintf(&sb, "command %s: %s", err.Name, err.Message)
+	} else {
+		fmt.Fprintf(&sb, "%s", err.Message)
 	}
-	return err.Message
+
+	if err.Wrapped != nil {
+		fmt.Fprintf(&sb, ": %s", err.Wrapped)
+	}
+	return sb.String()
 }
 
 func unrecognizedCommand(arg string) *CommandError {
