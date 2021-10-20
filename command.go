@@ -70,24 +70,25 @@ import (
 	"unicode/utf8"
 )
 
-// Command represents a command in the command tree and maybe the root of its
-// subcommand tree.
+// Command represents a command in the command tree. It may be the root of its
+// own subcommand tree. The program itself will be represented by a root command
+// with the name of the program.
 type Command struct {
-	// name of command usually short (e.g. "list")
+	// Name of command usually short (e.g. "list")
 	Name string
-	// short description of the command (e.g. "list all config parameters")
+	// Short description of the command (e.g. "list all config parameters")
 	Info string
 	// The usage string may have multiple lines.
 	Usage string
-	// Longer description that will be formatted using the formatter.
+	// Longer description that will be formatted.
 	Description string
 	// Options list. Note these options must immediately follow the
-	// commands and any non-option or new command will terminate it.
+	// command in the command line and any non-option will stop the
+	// processing of the options for this command.
 	Options []*Option
 	// List of all subcommands for this command.
 	Subcommands []*Command
-	// Function that executes the command. The out argument must be used for
-	// error output.
+	// Function that executes the command.
 	Exec func(args []string) error
 }
 
