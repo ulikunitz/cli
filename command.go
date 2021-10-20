@@ -204,7 +204,7 @@ func (err *CommandError) Unwrap() error { return err.Wrapped }
 func (err *CommandError) Error() string {
 	var sb strings.Builder
 	if err.Name != "" {
-		fmt.Fprintf(&sb, "command %s: %s", err.Name, err.Message)
+		fmt.Fprintf(&sb, "%s: %s", err.Name, err.Message)
 	} else {
 		fmt.Fprintf(&sb, "%s", err.Message)
 	}
