@@ -4,9 +4,9 @@ import (
 	"os"
 )
 
-// HelpCommand generates a help command that prints the documentation for the
-// commands of the program.
-func HelpCommand(root *Command) *Command {
+// AddHelpCommand generates a help command that prints the documentation of all
+// subcommands under the root command.
+func AddHelpCommand(root *Command) {
 
 	f := func(args []string) error {
 		commands, _, err := Parse(root, args)
@@ -25,5 +25,5 @@ func HelpCommand(root *Command) *Command {
 		Exec:  f,
 	}
 
-	return cmd
+	root.Subcommands = append(root.Subcommands, cmd)
 }
