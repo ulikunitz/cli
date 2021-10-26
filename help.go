@@ -5,7 +5,8 @@ import (
 )
 
 // AddHelpCommand generates a help command that prints the documentation of all
-// subcommands under the root command.
+// subcommands under the root command and adds it as subcommand to the root
+// command.
 func AddHelpCommand(root *Command) {
 
 	f := func(args []string) error {
