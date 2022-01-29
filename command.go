@@ -2,8 +2,10 @@
 Package cli supports the creation of command line appplications with
 subcommands and help output.
 
-A typical program will using this package will import the package, setup the
-root command and add a help command.
+A typical program will import this package, setup the root command and add a
+help command.
+
+  package main
 
   import (
 	"log"
@@ -21,7 +23,7 @@ root command and add a help command.
 		Subcommands: []*cli.Command{subcommand()},
 	}
 
-	AddHelpCommand(root)
+	cli.AddHelpCommand(root)
 
 	var args []string
 	if len(os.Args) == 1 {
