@@ -237,6 +237,12 @@ func unrecognizedOptionError(arg string) error {
 }
 
 func handleLongOption(options []*Option, args []string) (argsUsed int, err error) {
+	for i, a := range args[1:] {
+		if len(a) > 0 && a[0] == '-' {
+			args = args[:i+1]
+			break
+		}
+	}
 	var option string
 	arg := args[0]
 	k := strings.IndexByte(arg, '=')
@@ -248,6 +254,7 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 	if option == "" {
 		return 1, unrecognizedOptionError(arg)
 	}
+
 	var found *Option
 	for _, o := range options {
 		if strings.HasPrefix(o.Name, option) {
@@ -312,6 +319,12 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 }
 
 func handleShortOptions(options []*Option, args []string) (argsUsed int, err error) {
+	for i, a := range args[1:] {
+		if len(a) > 0 && a[0] == '-' {
+			args = args[:i+1]
+			break
+		}
+	}
 	arg := args[0]
 	i := 1
 	for _, short := range arg[1:] {
