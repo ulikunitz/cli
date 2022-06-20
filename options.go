@@ -25,8 +25,9 @@ type Option struct {
 	ParamType string
 	// Default param value.
 	Default string
-	// SetValue set the value to the parameter string given.
-	SetValue func(param string) error
+	// SetValue set the value to the parameter string given and informs no
+	// parameter for OptionalParams.
+	SetValue func(param string, noParam bool) error
 	// ResetValue can be used to reset the value. If it is nil then
 	// opt.SetValue(opt.Default) will be called.
 	ResetValue func()
@@ -38,7 +39,7 @@ func (opt *Option) Reset() error {
 		opt.ResetValue()
 		return nil
 	}
-	return opt.SetValue(opt.Default)
+	return opt.SetValue(opt.Default, false)
 }
 
 // BoolOption initializes a boolean flag. The argument f will be set to false.
@@ -50,7 +51,7 @@ func BoolOption(f *bool, name string, short rune, description string) *Option {
 		Description: description,
 		HasParam:    false,
 		Default:     "",
-		SetValue: func(arg string) error {
+		SetValue: func(arg string, noParam bool) error {
 			*f = true
 			return nil
 		},
@@ -68,7 +69,7 @@ func StringOption(s *string, name string, short rune, description string) *Optio
 		HasParam:    true,
 		ParamType:   "string",
 		Default:     *s,
-		SetValue: func(arg string) error {
+		SetValue: func(arg string, noParam bool) error {
 			*s = arg
 			return nil
 		},
@@ -93,7 +94,7 @@ func IntOption(n *int, name string, short rune, description string) *Option {
 		HasParam:    true,
 		ParamType:   "int",
 		Default:     def,
-		SetValue: func(arg string) error {
+		SetValue: func(arg string, noParam bool) error {
 			i, err := strconv.ParseInt(arg, 0, intSize)
 			if err != nil {
 				return err
@@ -122,7 +123,7 @@ func Float64Option(f *float64, name string, short rune,
 		HasParam:    true,
 		ParamType:   "float64",
 		Default:     def,
-		SetValue: func(arg string) error {
+		SetValue: func(arg string, noParam bool) error {
 			x, err := strconv.ParseFloat(arg, 64)
 			if err != nil {
 				return err
@@ -277,7 +278,7 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 					"option --%s requires no parameter",
 					option)}
 		}
-		if err = found.SetValue(""); err != nil {
+		if err = found.SetValue("", true); err != nil {
 			return 1, &OptionError{Option: option,
 				Msg: fmt.Sprintf(
 					"error setting value for option --%s",
@@ -287,7 +288,10 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 		return 1, nil
 	}
 
-	var param string
+	var (
+		param   string
+		noParam bool
+	)
 	if k < 0 {
 		if len(args) == 1 {
 			if !found.OptionalParam {
@@ -296,6 +300,7 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 						option),
 				}
 			}
+			noParam = true
 			argsUsed = 1
 		} else {
 			param = args[1]
@@ -306,7 +311,7 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 		argsUsed = 1
 	}
 
-	if err = found.SetValue(param); err != nil {
+	if err = found.SetValue(param, noParam); err != nil {
 		return argsUsed, &OptionError{
 			Option: option,
 			Msg: fmt.Sprintf("error setting value %q for option --%s",
@@ -341,7 +346,7 @@ func handleShortOptions(options []*Option, args []string) (argsUsed int, err err
 		}
 
 		if !found.HasParam {
-			if err = found.SetValue(""); err != nil {
+			if err = found.SetValue("", true); err != nil {
 				return i, &OptionError{
 					Option: option,
 					Msg: fmt.Sprintf(
@@ -352,7 +357,10 @@ func handleShortOptions(options []*Option, args []string) (argsUsed int, err err
 			continue
 		}
 
-		var param string
+		var (
+			param   string
+			noParam bool
+		)
 		if i >= len(args) {
 			if !found.OptionalParam {
 				return i, &OptionError{
@@ -362,11 +370,12 @@ func handleShortOptions(options []*Option, args []string) (argsUsed int, err err
 						option),
 				}
 			}
+			noParam = true
 		} else {
 			param = args[i]
 			i++
 		}
-		if err = found.SetValue(param); err != nil {
+		if err = found.SetValue(param, noParam); err != nil {
 			return i, &OptionError{
 				Option: option,
 				Msg: fmt.Sprintf("error setting value %s for option %s",
