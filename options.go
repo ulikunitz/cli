@@ -29,7 +29,7 @@ type Option struct {
 	// parameter for OptionalParams.
 	SetValue func(param string, noParam bool) error
 	// ResetValue can be used to reset the value. If it is nil then
-	// opt.SetValue(opt.Default) will be called.
+	// opt.SetValue(opt.Default, false) will be called.
 	ResetValue func()
 }
 
@@ -485,7 +485,7 @@ func ResetOptions(options []*Option) error {
 }
 
 // ParseOptions parses the flags and stops at first non-flag or '--'. It returns
-// the number of args parsed. The e writer will be used for error messages.
+// the number of args parsed.
 func ParseOptions(options []*Option, args []string) (n int, err error) {
 	i := 0
 	var errList errorList

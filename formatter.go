@@ -8,8 +8,8 @@ import (
 	"unicode"
 )
 
-// formatText is a generic text formatter. Text that starts with newlines is
-// is formatted as verbatim text without reformatting. The output text is
+// formatText is a generic text formatter. Text that starts with whitespace is
+// formatted as verbatim text without reformatting. The output text is
 // indented with the indent string. Don't use tabs in the indent because it will
 // be counted as a single character.
 func formatText(w io.Writer, s string, lineWidth int, indent string) (n int, err error) {
