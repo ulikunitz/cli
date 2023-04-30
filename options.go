@@ -21,7 +21,7 @@ type Option struct {
 	HasParam bool
 	// OptionalParam
 	OptionalParam bool
-	// ParamType desribes the type of the parameter
+	// ParamType describes the type of the parameter
 	ParamType string
 	// Default param value.
 	Default string

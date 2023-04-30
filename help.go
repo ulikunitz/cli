@@ -4,10 +4,14 @@ import (
 	"os"
 )
 
-// AddHelpCommand generates a help command that prints the documentation of all
-// subcommands under the root command and adds it as subcommand to the root
-// command.
-func AddHelpCommand(root *Command) {
+// AddHelpCommand adds a subcommand help to the root command if doesn't support
+// a help command already.
+func AddHelpCommand(root *Command) bool {
+	for _, cmd := range root.Subcommands {
+		if cmd.Name == "help" {
+			return false
+		}
+	}
 
 	f := func(args []string) error {
 		commands, _, err := Parse(root, args)
@@ -27,4 +31,55 @@ func AddHelpCommand(root *Command) {
 	}
 
 	root.Subcommands = append(root.Subcommands, cmd)
+
+	return true
+}
+
+var helpFlag = false
+
+func helpOption() *Option {
+	return &Option{
+		Name:        "help",
+		Short:       'h',
+		Description: "prints help message for command",
+		HasParam:    false,
+		Default:     "",
+		SetValue: func(arg string, noParam bool) error {
+			helpFlag = true
+			return nil
+		},
+		ResetValue: func() { helpFlag = false },
+	}
+}
+
+// AddHelpOption adds a help option for the command if it doesn't have an option
+// -h already. Note the Exec function must already been set.
+func AddHelpOption(cmd *Command) bool {
+	for _, o := range cmd.Options {
+		if o.Short == 'h' {
+			return false
+		}
+	}
+	f := cmd.Exec
+	newF := func(args []string) error {
+		if helpFlag {
+			_, err := cmd.WriteDoc(os.Stdout)
+			return err
+		}
+		return f(args)
+	}
+	cmd.Options = append(cmd.Options, helpOption())
+	cmd.Exec = newF
+	return true
+}
+
+// AddHelpOptionToAll adds a help option to all subcommands that don't have the
+// name help.
+func AddHelpOptionToAll(cmd *Command) {
+	if cmd.Name != "help" {
+		AddHelpOption(cmd)
+	}
+	for _, c := range cmd.Subcommands {
+		AddHelpOptionToAll(c)
+	}
 }
