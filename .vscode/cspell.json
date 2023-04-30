@@ -1,0 +1,25 @@
+{
+    "version": "0.2",
+    "ignorePaths": [],
+    "dictionaryDefinitions": [],
+    "dictionaries": [],
+    "words": [],
+    "ignoreWords": [
+        "Bäume",
+        "Hier",
+        "Schatten",
+        "Sonne",
+        "Telekonferenzen",
+        "auch",
+        "beginnt",
+        "fühlte",
+        "nächste",
+        "schützten",
+        "sich",
+        "subcmd",
+        "ulikunitz",
+        "warfen",
+        "wohl"
+    ],
+    "import": []
+}

@@ -1,5 +1,5 @@
 /*
-Package cli supports the creation of command line appplications with
+Package cli supports the creation of command line applications with
 subcommands and help output.
 
 A typical program will import this package, setup the root command and add a
