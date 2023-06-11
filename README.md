@@ -1,3 +1,3 @@
 # cli
 
-Module to implement command line interface with GNU options
+Module to implement command line interfaces with GNU options.
