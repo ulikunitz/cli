@@ -55,6 +55,12 @@ func helpOption() *Option {
 // AddHelpOption adds a help option for the command if it doesn't have an option
 // -h already. Note the Exec function must already been set.
 func AddHelpOption(cmd *Command) bool {
+	if cmd.Name == "help" {
+		return false
+	}
+	if cmd.Exec == nil {
+		return false
+	}
 	for _, o := range cmd.Options {
 		if o.Short == 'h' {
 			return false
@@ -76,9 +82,7 @@ func AddHelpOption(cmd *Command) bool {
 // AddHelpOptionToAll adds a help option to all subcommands that don't have the
 // name help.
 func AddHelpOptionToAll(cmd *Command) {
-	if cmd.Name != "help" {
-		AddHelpOption(cmd)
-	}
+	AddHelpOption(cmd)
 	for _, c := range cmd.Subcommands {
 		AddHelpOptionToAll(c)
 	}
