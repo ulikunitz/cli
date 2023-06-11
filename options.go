@@ -13,8 +13,14 @@ import (
 type Option struct {
 	// long name of the option; must be used with prefix '--'
 	Name string
-	// short option
+	// short option; must be in [A-Za-z0-9]
 	Short rune
+	// long names additional to name
+	Names []string
+	// short runes additional to Names
+	Shorts []rune
+	// Custom usage information about options
+	UsageInfo string
 	// description of the option
 	Description string
 	// HasParam defines whether the option has parameter
@@ -25,13 +31,114 @@ type Option struct {
 	ParamType string
 	// Default param value.
 	Default string
-	// SetValue set the value to the parameter string given and informs no
-	// parameter for OptionalParams.
-	SetValue func(param string, noParam bool) error
+	// SetValue set the value to the parameter string given and informs
+	// whether there was a parameter or not.
+	SetValue func(name string, param string, noParam bool) error
 	// ResetValue can be used to reset the value. If it is nil then
 	// opt.SetValue(opt.Default, false) will be called.
 	ResetValue func()
 }
+
+/* TODO: remove
+func (opt *Option) hasShort(s rune) bool {
+	if s == 0 {
+		return false
+	}
+	if s == opt.Short {
+		return true
+	}
+	for _, r := range opt.Shorts {
+		if r == s {
+			return true
+		}
+	}
+	return false
+}
+*/
+
+func (opt *Option) AllShorts() []rune {
+	n := len(opt.Shorts)
+	if opt.Short != 0 {
+		n++
+	}
+	s := make([]rune, 0, n)
+	if opt.Short != 0 {
+		s = append(s, opt.Short)
+	}
+	s = append(s, opt.Shorts...)
+	sort.Slice(s, func(i, j int) bool { return s[i] < s[j] })
+	return s
+}
+
+func (opt *Option) AllNames() []string {
+	n := len(opt.Names)
+	if opt.Name != "" {
+		n++
+	}
+	s := make([]string, 0, n)
+	if opt.Name != "" {
+		s = append(s, opt.Name)
+	}
+	s = append(s, opt.Names...)
+	sort.Strings(s)
+	return s
+}
+
+func (opt *Option) hasShortString(n string) bool {
+	if n == "" || n == "\x00" {
+		return false
+	}
+	if string(opt.Short) == n {
+		return true
+	}
+	for _, r := range opt.Shorts {
+		s := string(r)
+		if s == n {
+			return true
+		}
+	}
+	return false
+}
+
+func (opt *Option) hasName(name string) bool {
+	if name == "" {
+		return false
+	}
+	if name == opt.Name {
+		return true
+	}
+	for _, n := range opt.Names {
+		if n == name {
+			return true
+		}
+	}
+	return false
+}
+
+func verifyShort(s rune) error {
+	if s == 0 {
+		return nil
+	}
+	if 'a' <= s && s <= 'z' {
+		return nil
+	}
+	if 'A' <= s && s <= 'Z' {
+		return nil
+	}
+	if '0' <= s && s <= '9' {
+		return nil
+	}
+	return fmt.Errorf("short option %q (%U) not supported", s, s)
+}
+
+func validShort(s rune) {
+	err := verifyShort(s)
+	if err != nil {
+		panic(err)
+	}
+}
+
+const resetName = "<reset>"
 
 // Reset calls ResetValue if defined or SetValue with with the default argument.
 func (opt *Option) Reset() error {
@@ -39,11 +146,12 @@ func (opt *Option) Reset() error {
 		opt.ResetValue()
 		return nil
 	}
-	return opt.SetValue(opt.Default, false)
+	return opt.SetValue(resetName, opt.Default, false)
 }
 
 // BoolOption initializes a boolean flag. The argument f will be set to false.
 func BoolOption(f *bool, name string, short rune, description string) *Option {
+	validShort(short)
 	*f = false
 	return &Option{
 		Name:        name,
@@ -51,7 +159,7 @@ func BoolOption(f *bool, name string, short rune, description string) *Option {
 		Description: description,
 		HasParam:    false,
 		Default:     "",
-		SetValue: func(arg string, noParam bool) error {
+		SetValue: func(name, arg string, noParam bool) error {
 			*f = true
 			return nil
 		},
@@ -62,6 +170,7 @@ func BoolOption(f *bool, name string, short rune, description string) *Option {
 // StringOption creates a string flag. The default value is the value that s has
 // when Parse is called.
 func StringOption(s *string, name string, short rune, description string) *Option {
+	validShort(short)
 	return &Option{
 		Name:        name,
 		Short:       short,
@@ -69,7 +178,7 @@ func StringOption(s *string, name string, short rune, description string) *Optio
 		HasParam:    true,
 		ParamType:   "string",
 		Default:     *s,
-		SetValue: func(arg string, noParam bool) error {
+		SetValue: func(name, arg string, noParam bool) error {
 			*s = arg
 			return nil
 		},
@@ -80,6 +189,7 @@ func StringOption(s *string, name string, short rune, description string) *Optio
 // this function is called. Integers in the form of 0b101, 0xf5 or 0234 are
 // supported.
 func IntOption(n *int, name string, short rune, description string) *Option {
+	validShort(short)
 	const intSize = 32 << (^uint(0) >> 63)
 	var def string
 	if *n != 0 {
@@ -94,7 +204,7 @@ func IntOption(n *int, name string, short rune, description string) *Option {
 		HasParam:    true,
 		ParamType:   "int",
 		Default:     def,
-		SetValue: func(arg string, noParam bool) error {
+		SetValue: func(name, arg string, noParam bool) error {
 			i, err := strconv.ParseInt(arg, 0, intSize)
 			if err != nil {
 				return err
@@ -108,8 +218,8 @@ func IntOption(n *int, name string, short rune, description string) *Option {
 // Float64Option creates a flag with a floating point value. The default value
 // is the value of f when called. All forms of floating point numbers valid in
 // the Go language are supported.
-func Float64Option(f *float64, name string, short rune,
-	description string) *Option {
+func Float64Option(f *float64, name string, short rune, description string) *Option {
+	validShort(short)
 	var def string
 	if *f != 0 {
 		def = fmt.Sprintf("%g", *f)
@@ -123,7 +233,7 @@ func Float64Option(f *float64, name string, short rune,
 		HasParam:    true,
 		ParamType:   "float64",
 		Default:     def,
-		SetValue: func(arg string, noParam bool) error {
+		SetValue: func(name, arg string, noParam bool) error {
 			x, err := strconv.ParseFloat(arg, 64)
 			if err != nil {
 				return err
@@ -137,10 +247,10 @@ func Float64Option(f *float64, name string, short rune,
 
 func findOption(flags []*Option, name string) (f *Option, ok bool) {
 	for _, f := range flags {
-		if f.Name == name {
+		if f.hasName(name) {
 			return f, true
 		}
-		if string(f.Short) == name {
+		if f.hasShortString(name) {
 			return f, true
 		}
 	}
@@ -149,6 +259,9 @@ func findOption(flags []*Option, name string) (f *Option, ok bool) {
 
 // Usage returns the one-line string for the option.
 func (opt *Option) Usage() string {
+	if opt.UsageInfo != "" {
+		return opt.UsageInfo
+	}
 	var ptype string
 	if opt.HasParam {
 		ptype = opt.ParamType
@@ -157,8 +270,14 @@ func (opt *Option) Usage() string {
 		}
 	}
 	var sb strings.Builder
-	if opt.Short != 0 {
-		fmt.Fprintf(&sb, "-%c", opt.Short)
+	i := 0
+
+	if shorts := opt.AllShorts(); len(shorts) > 0 {
+		fmt.Fprint(&sb, "-")
+		i++
+		for _, r := range shorts {
+			fmt.Fprintf(&sb, "%c", r)
+		}
 		if opt.HasParam {
 			if opt.OptionalParam {
 				fmt.Fprintf(&sb, " [%s]", ptype)
@@ -167,16 +286,20 @@ func (opt *Option) Usage() string {
 			}
 		}
 	}
-	if opt.Name != "" {
-		if opt.Short != 0 {
-			fmt.Fprintf(&sb, ", ")
-		}
-		fmt.Fprintf(&sb, "--%s", opt.Name)
-		if opt.HasParam {
-			if opt.OptionalParam {
-				fmt.Fprintf(&sb, "[=%s]", ptype)
-			} else {
-				fmt.Fprintf(&sb, "=%s", ptype)
+
+	if names := opt.AllNames(); len(names) > 0 {
+		for _, n := range names {
+			if i > 0 {
+				fmt.Fprintf(&sb, ", ")
+			}
+			fmt.Fprintf(&sb, "--%s", n)
+			i++
+			if opt.HasParam {
+				if opt.OptionalParam {
+					fmt.Fprintf(&sb, "[=%s]", ptype)
+				} else {
+					fmt.Fprintf(&sb, "=%s", ptype)
+				}
 			}
 		}
 	}
@@ -190,14 +313,17 @@ func (opt *Option) Usage() string {
 // information for an option will be preceded by indent1 and the description by
 // indent1+indent2 formatted on 80 character lines.
 func UsageOptions(w io.Writer, opts []*Option, indent1, indent2 string) (n int, err error) {
-	names := make([]string, 0, len(opts))
+	names := make([]string, 0, len(opts)+32)
 	for _, f := range opts {
-		if f.Short != 0 {
-			names = append(names, string(f.Short))
-		} else {
-			names = append(names, f.Name)
+		shorts := f.AllShorts()
+		if len(shorts) > 0 {
+			names = append(names, string(shorts[0]))
+			continue
 		}
-
+		fNames := f.AllNames()
+		if len(fNames) > 0 {
+			names = append(names, fNames[0])
+		}
 	}
 	sort.Strings(names)
 	for _, s := range names {
@@ -258,18 +384,19 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 
 	var found *Option
 	for _, o := range options {
-		if strings.HasPrefix(o.Name, option) {
-			if found != nil {
-				return 0, unrecognizedOptionError(arg)
+		for _, name := range o.AllNames() {
+			if strings.HasPrefix(name, option) {
+				if found != nil {
+					return 0, unrecognizedOptionError(arg)
+				}
+				option = name
+				found = o
 			}
-			found = o
 		}
 	}
 	if found == nil {
 		return 1, unrecognizedOptionError(arg)
 	}
-
-	option = found.Name
 
 	if !found.HasParam {
 		if k >= 0 {
@@ -278,7 +405,7 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 					"option --%s requires no parameter",
 					option)}
 		}
-		if err = found.SetValue("", true); err != nil {
+		if err = found.SetValue(option, "", true); err != nil {
 			return 1, &OptionError{Option: option,
 				Msg: fmt.Sprintf(
 					"error setting value for option --%s",
@@ -311,7 +438,7 @@ func handleLongOption(options []*Option, args []string) (argsUsed int, err error
 		argsUsed = 1
 	}
 
-	if err = found.SetValue(param, noParam); err != nil {
+	if err = found.SetValue(option, param, noParam); err != nil {
 		return argsUsed, &OptionError{
 			Option: option,
 			Msg: fmt.Sprintf("error setting value %q for option --%s",
@@ -333,10 +460,10 @@ func handleShortOptions(options []*Option, args []string) (argsUsed int, err err
 	arg := args[0]
 	i := 1
 	for _, short := range arg[1:] {
-		option := fmt.Sprintf("%c", short)
+		option := string(short)
 		var found *Option
 		for _, o := range options {
-			if o.Short == short {
+			if o.hasShortString(option) {
 				found = o
 				break
 			}
@@ -346,7 +473,7 @@ func handleShortOptions(options []*Option, args []string) (argsUsed int, err err
 		}
 
 		if !found.HasParam {
-			if err = found.SetValue("", true); err != nil {
+			if err = found.SetValue(option, "", true); err != nil {
 				return i, &OptionError{
 					Option: option,
 					Msg: fmt.Sprintf(
@@ -375,7 +502,7 @@ func handleShortOptions(options []*Option, args []string) (argsUsed int, err err
 			param = args[i]
 			i++
 		}
-		if err = found.SetValue(param, noParam); err != nil {
+		if err = found.SetValue(option, param, noParam); err != nil {
 			return i, &OptionError{
 				Option: option,
 				Msg: fmt.Sprintf("error setting value %s for option %s",

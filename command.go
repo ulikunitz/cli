@@ -5,37 +5,37 @@ subcommands and help output.
 A typical program will import this package, setup the root command and add a
 help command.
 
-  package main
+	  package main
 
-  import (
-	"log"
-	"os"
+	  import (
+		"log"
+		"os"
 
-	"github.com/ulikunitz/cli"
-  )
+		"github.com/ulikunitz/cli"
+	  )
 
-  func main() {
-	log.SetFlags(0)
+	  func main() {
+		log.SetFlags(0)
 
-	root := &cli.Command{
-		Name:        "foo",
-		Info:        "program to run compression benchmarks",
-		Subcommands: []*cli.Command{subcommand()},
-	}
+		root := &cli.Command{
+			Name:        "foo",
+			Info:        "program to run compression benchmarks",
+			Subcommands: []*cli.Command{subcommand()},
+		}
 
-	cli.AddHelpCommand(root)
+		cli.AddHelpCommand(root)
 
-	var args []string
-	if len(os.Args) == 1 {
-		args = []string{"help"}
-	} else {
-		args = os.Args[1:]
-	}
+		var args []string
+		if len(os.Args) == 1 {
+			args = []string{"help"}
+		} else {
+			args = os.Args[1:]
+		}
 
-	if err := cli.Run(root, args); err != nil {
-		log.Fatal(err)
-	}
-  }
+		if err := cli.Run(root, args); err != nil {
+			log.Fatal(err)
+		}
+	  }
 */
 package cli
 
@@ -107,9 +107,9 @@ func (cmd *Command) WriteDoc(w io.Writer) (n int, err error) {
 			k, err = fmt.Fprintf(w, "%s%s - %s\n",
 				indent, cmd.Name, cmd.Info)
 		case cmd.Name != "":
-			k, err = fmt.Fprintln(w, indent, cmd.Name)
+			k, err = fmt.Fprintf(w, "%s%s\n", indent, cmd.Name)
 		case cmd.Info != "":
-			k, err = fmt.Fprintln(w, indent, cmd.Info)
+			k, err = fmt.Fprintf(w, "%s%s\n", indent, cmd.Info)
 		}
 		n += k
 		if err != nil {
@@ -130,7 +130,7 @@ func (cmd *Command) WriteDoc(w io.Writer) (n int, err error) {
 		if err != nil {
 			return n, err
 		}
-		k, err = fmt.Fprintln(w, indent, cmd.Usage)
+		k, err = fmt.Fprintf(w, "%s%s\n", indent, cmd.Usage)
 		n += k
 		if err != nil {
 			return n, err

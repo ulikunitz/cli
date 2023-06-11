@@ -44,7 +44,7 @@ func helpOption() *Option {
 		Description: "prints help message for command",
 		HasParam:    false,
 		Default:     "",
-		SetValue: func(arg string, noParam bool) error {
+		SetValue: func(name, arg string, noParam bool) error {
 			helpFlag = true
 			return nil
 		},
@@ -63,7 +63,7 @@ func AddHelpOption(cmd *Command) bool {
 		return false
 	}
 	for _, o := range cmd.Options {
-		if o.Short == 'h' {
+		if o.hasShortString("h") {
 			return false
 		}
 	}
