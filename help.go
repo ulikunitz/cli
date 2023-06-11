@@ -53,7 +53,8 @@ func helpOption() *Option {
 }
 
 // AddHelpOption adds a help option for the command if it doesn't have an option
-// -h already. Note the Exec function must already been set.
+// -h already. Note the Exec function must already been set or the no help
+// option is added
 func AddHelpOption(cmd *Command) bool {
 	if cmd.Name == "help" {
 		return false
