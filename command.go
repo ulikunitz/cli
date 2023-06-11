@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: © 2021 Ulrich Kunitz
+//
+// SPDX-License-Identifier: BSD-3-Clause
+
 /*
 Package cli supports the creation of command line applications with
 subcommands and help output.
