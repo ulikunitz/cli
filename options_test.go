@@ -118,4 +118,3 @@ func TestResetOptions(t *testing.T) {
 		t.Errorf("str is %q after reset; want %q", str, "")
 	}
 }
-

@@ -39,23 +39,7 @@ type Option struct {
 	ResetValue func()
 }
 
-/* TODO: remove
-func (opt *Option) hasShort(s rune) bool {
-	if s == 0 {
-		return false
-	}
-	if s == opt.Short {
-		return true
-	}
-	for _, r := range opt.Shorts {
-		if r == s {
-			return true
-		}
-	}
-	return false
-}
-*/
-
+// AllShorts returns all short option names in lexicographic order.
 func (opt *Option) AllShorts() []rune {
 	n := len(opt.Shorts)
 	if opt.Short != 0 {
@@ -70,6 +54,7 @@ func (opt *Option) AllShorts() []rune {
 	return s
 }
 
+// AllNames returns all long option names in lexicographic order.
 func (opt *Option) AllNames() []string {
 	n := len(opt.Names)
 	if opt.Name != "" {
@@ -514,6 +499,7 @@ func handleShortOptions(options []*Option, args []string) (argsUsed int, err err
 	return i, nil
 }
 
+// OptionError provides information regarding an option error.
 type OptionError struct {
 	Option  string
 	Msg     string
@@ -531,6 +517,7 @@ func (err *OptionError) Error() string {
 	return msg
 }
 
+// Is checks whether the error is actually one of the errors provided.
 func (err *OptionError) Is(e error) bool {
 	if oe, ok := e.(*OptionError); ok {
 		return err.Option == oe.Option
