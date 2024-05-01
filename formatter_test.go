@@ -77,6 +77,7 @@ Hier beginnt der nächste Paragraph.
 func TestFormatText2(t *testing.T) {
 	tests := []string{
 		"a boolean option",
+		"\nEs ist gut. Es wird noch beser.\n",
 	}
 
 	for _, tc := range tests {
@@ -86,5 +87,6 @@ func TestFormatText2(t *testing.T) {
 			t.Fatalf("formatText(&sb, %q, %d, %q) error %s",
 				tc, 80, "    ", err)
 		}
+		t.Logf("\n%s", sb.String())
 	}
 }

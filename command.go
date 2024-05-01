@@ -54,6 +54,16 @@ import (
 // Command represents a command in the command tree. It may be the root of its
 // own subcommand tree. The program itself will be represented by a root command
 // with the name of the program.
+//
+// Note that the lines of the Description field that have leading whitespace
+// will be copied verbatim. So the typical use should look like this:
+//
+//	cmd := &Command{
+//	    Name: "list",
+//	    Description: `
+//	The command list will list all configuration parameters. It supports multiple
+//	options.`,
+//	}
 type Command struct {
 	// Name of command usually short (e.g. "list")
 	Name string
