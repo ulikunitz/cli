@@ -122,3 +122,23 @@ func TestResetOptions(t *testing.T) {
 		t.Errorf("str is %q after reset; want %q", str, "")
 	}
 }
+
+func TestNoShortOption(t *testing.T) {
+	var f bool
+
+	opts := []*cli.Option{
+		cli.BoolOption(&f, "flag", 0, "a boolean option"),
+	}
+
+	var sb strings.Builder
+	_, err := cli.UsageOptions(&sb, opts, "  ", "  ")
+	if err != nil {
+		t.Fatalf("UsageOptions error %s", err)
+	}
+	t.Logf("usage:\n%s", sb.String())
+
+	if _, err := cli.ParseOptions(opts, []string{"--flag"}); err != nil {
+		t.Fatalf("ParseOptions error %s", err)
+	}
+
+}
