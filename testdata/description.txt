@@ -1,0 +1,180 @@
+The program pizza compresses and decompresses computer files. It supports
+multiple compression formats and methods. The program might be called by
+multiple names.
+
+# Command pizza
+
+The name pizza will invoke the program in standard mode and it will, without
+further options, compress the files named as arguments.
+
+# Command azzip, unpizza
+
+The names azzip or unpizza will decompress the files provided as arguments.
+
+# Command pzcat
+
+The name pzcat will decompress the provided files and write the result to the
+output.
+
+# Overview
+
+The name pizza is a play on the word "zip" and the fact that the program
+supports multiple compression formats. Currently, it supports xz and lzma.
+The format can be selected with the -F option.
+
+The command below will create the file main.go.lzma using the LZMA compression
+format.
+
+    $ pizza -F lzma main.go
+
+If you want to keep the original file, use the -k option.
+
+    $ pizza -k -F lzma main.go
+
+To print the file to stdout, use the pzcat command,
+
+    $ pzcat main.go.lzma
+
+or use the options -d and -c for decompressing the program to stdout.
+
+    $ pizza -d -c main.go.lzma
+
+To convert the program back to the original file, simply call,
+
+    $ pizza -d main.go.lzma
+
+or
+
+    $ azzip main.go.lzma
+
+or
+
+    $ unpizza main.go.lzma
+
+All of the examples work with the xz format as well, which is the default
+format.
+
+    $ pizza -k main.go
+    $ pizza main.go
+    $ pzcat main.go.xz
+    $ pizza -d -c main.go.xz
+    $ pizza -d main.go.xz
+    $ azzip main.go.xz
+    $ unpizza main.go.xz
+
+The compression speed and ratio can be adjusted by using the -1 to -9 options.
+
+To compress very fast, use the -1 option.
+
+    $ pizza -1 main.go
+
+If you want to compress as much as possible, use the -9 option.
+
+    $ pizza -9 main.go
+
+Note that pizza uses the cores available on your system (as controlled by the
+GOMAXPROCS environment variable). If you want to restrict the number of cores
+used, use the -T option.
+
+    $ pizza -T 1 main.go
+
+The lzma format doesn't support parallel compression.
+
+The program also supports the configuration of the compression using a JSON file
+by using the -G option.
+
+    $ pizza -G config.json main.go
+
+Alternatively, it can be directly provided as a JSON string.
+
+    $ pizza -C '{"Format":"LZMA","WindowSize": 16384}' main.go
+
+# XZ JSON Configuration
+
+The XZ JSON Configuration is identified by the Format field set to "XZ".
+All other fields are optional.
+
+The configuration is a JSON object with the following fields:
+  - Format: "XZ", mandatory field
+  - WindowSize: defines the compression window size
+  - LC: LZMA property
+  - LP: LZMA property
+  - PB: LZMA property
+  - FixedProperties: should be used if the LC, LB, and PB are actually zero
+  - Workers: number of workers to use for compression
+  - LZMAParallel: use LZMA parallel compression
+  - LZMAWorkSize: the work size for LZMA to allow parallel compression
+  - ParserConfig: LZ parser configuration, see documentation below
+  - XZBlockSize: XZ block size
+  - Checksum: type of checksum; <none>, crc32, crc64, or sha256
+  - NoChecksum: bool, explicitly disable checksums
+
+# LZMA JSON Configuration
+
+The LZMA JSON Configuration is identified by the Format field set to "LZMA".
+All other fields are optional.
+
+The configuration is a JSON object with the following fields:
+  - Format: "LZMA", mandatory field
+  - WindowSize: defines the compression window size
+  - LC: LZMA property
+  - LP: LZMA property
+  - PB: LZMA property
+  - FixedProperties: should be used if LC, LB, and PB are actually zero
+  - FixedSize: the stream size has a fixed size
+  - Size: actual size of the stream if FixedSize is true
+  - ParserConfig: LZ parser configuration, see documentation below
+
+# Parser Configuration
+
+The parser configuration describes specific settings for the LZ parser.
+The parser takes the uncompressed data and compresses it. The parser converts
+the uncompressed data and produces sequences of literals and backward matches.
+The pizza tool supports multiple parser types with different parameters.
+
+All parser configuration parameters share the following parameters:
+  - BufferSize: the size of the parsing buffer
+  - ShrinkSize: minimum size of the buffer
+  - WindowSize: the size of the backward window, which should be less than the
+    buffer size
+  - BlockSize: the size for a block of data to parse in one step
+
+It is recommended to use the default parameters for these values.
+
+The hash parser, type HP, uses a single hash table to find backward matches.
+The specific parameters are:
+  - InputLen: hashed input data length (2..8)
+  - HashBits: number of bits used for the hash table (<= min(24, 8*InputLen))
+
+The backward hash parser, type BHP, uses a single hash table but tries to extend
+a match backward. It uses the same parameters as the HP parser.
+
+The double hash parser, type DHP, uses two hash tables to find the best backward
+match. So we have two sets of hash parameters.
+  - InputLen1: hashed input data length for the first hash table (2..8)
+  - HashBits1: number of bits used for the first hash table (<= min(24,
+    8*InputLen1))
+  - InputLen2: hashed input data length for the second hash table (2..8)
+  - HashBits2: number of bits used for the second hash table (<= min(24,
+    8*InputLen2))
+
+The backward double hash parser, type BDHP, adds extending matches backward to
+the double hash parser and has the same parameters as the double hash parser,
+DHP.
+
+The bucket hash parser, BUP, uses multiple entries per hash value. The
+configuration parameters are:
+  - InputLen: hashed input data length (2..8)
+  - HashBits: number of bits used for the hash table (<= min(24, 8*InputLen))
+  - BucketSize: number of entries per hash value
+
+The greedy suffix array parser, GSAP, uses a suffix array to find the
+backward match. Greedy means the first match is selected. Note this parser is
+experimental and very slow. It has a single parameter:
+  - MinMatchLen: minimum length of a match
+
+Another experimental parser is the optimizing suffix array parser, OSAP.
+The parameters are:
+  - MinMatchLen: minimum length of a match
+  - MaxMatchLen: maximum length of a match
+  - Cost: the cost function for the parser (only option now XZCost)

@@ -41,7 +41,11 @@ func formatText(w io.Writer, s string, lineWidth int, indent string) (n int, err
 		}
 		switch t.typ {
 		case tParagraph:
-			k, err = fmt.Fprint(w, "\n\n")
+			if column == 0 {
+				k, err = fmt.Fprint(w, "\n")
+			} else {
+				k, err = fmt.Fprint(w, "\n\n")
+			}
 			n += k
 			if err != nil {
 				return n, err

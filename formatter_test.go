@@ -6,6 +6,8 @@ package cli
 
 import (
 	"io"
+	"os"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -89,4 +91,26 @@ func TestFormatText2(t *testing.T) {
 		}
 		t.Logf("\n%s", sb.String())
 	}
+}
+
+func TestFormatText3(t *testing.T) {
+	d, err := os.ReadFile("testdata/description.txt")
+	if err != nil {
+		t.Fatalf("ReadFile error %s", err)
+	}
+	s := string(d)
+	var sb strings.Builder
+	_, err = formatText(&sb, s, 80, "    ")
+	if err != nil {
+		t.Fatalf("formatText error %s", err)
+	}
+	o := sb.String()
+	found, err := regexp.MatchString(`(?m)^$\n^$\n`, o)
+	if err != nil {
+		t.Fatalf("regexp.MatchString error %s", err)
+	}
+	if found {
+		t.Fatalf("found 2 empty lines in sequence")
+	}
+	t.Logf("\n%s", o)
 }
