@@ -93,6 +93,20 @@ func TestFormatText2(t *testing.T) {
 	}
 }
 
+var hyphenIndentRegexp = regexp.MustCompile(`(?m)^(\s*)- .*$\n^(\s*)\S+$`)
+
+func termLen(s string) int {
+	n := 0
+	for _, c := range s {
+		if c == '\t' {
+			n += 8 - n%8
+			continue
+		}
+		n++
+	}
+	return n
+}
+
 func TestFormatText3(t *testing.T) {
 	d, err := os.ReadFile("testdata/description.txt")
 	if err != nil {
@@ -105,6 +119,7 @@ func TestFormatText3(t *testing.T) {
 		t.Fatalf("formatText error %s", err)
 	}
 	o := sb.String()
+
 	found, err := regexp.MatchString(`(?m)^$\n^$\n`, o)
 	if err != nil {
 		t.Fatalf("regexp.MatchString error %s", err)
@@ -112,5 +127,13 @@ func TestFormatText3(t *testing.T) {
 	if found {
 		t.Fatalf("found 2 empty lines in sequence")
 	}
-	t.Logf("\n%s", o)
+
+	m := hyphenIndentRegexp.FindAllStringSubmatch(o, -1)
+	for _, a := range m {
+		if termLen(a[1])+2 != termLen(a[2]) {
+			t.Fatalf(
+				"indent error in %q; indent line 2 is %d; want %d",
+				a[0], termLen(a[2]), termLen(a[1])+2)
+		}
+	}
 }
