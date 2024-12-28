@@ -64,6 +64,8 @@ import (
 //	The command list will list all configuration parameters. It supports multiple
 //	options.`,
 //	}
+//
+// The Description field supports all features of the go doc comment formatter.
 type Command struct {
 	// Name of command usually short (e.g. "list")
 	Name string
