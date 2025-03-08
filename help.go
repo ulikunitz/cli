@@ -63,9 +63,6 @@ func AddHelpOption(cmd *Command) bool {
 	if cmd.Name == "help" {
 		return false
 	}
-	if cmd.Exec == nil {
-		return false
-	}
 	for _, o := range cmd.Options {
 		if o.hasShortString("h") {
 			return false
@@ -73,7 +70,7 @@ func AddHelpOption(cmd *Command) bool {
 	}
 	f := cmd.Exec
 	newF := func(args []string) error {
-		if helpFlag {
+		if f == nil || helpFlag {
 			_, err := cmd.WriteDoc(os.Stdout)
 			return err
 		}
